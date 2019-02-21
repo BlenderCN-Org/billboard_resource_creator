@@ -116,4 +116,4 @@ dmypy.json
 .pyre/
 
 #blender updates
-.blend1
+*.blend1
