@@ -115,5 +115,5 @@ dmypy.json
 # Pyre type checker
 .pyre/
 
-#blender updates
-*.blend1
+#blender session saves
+*.blend?
