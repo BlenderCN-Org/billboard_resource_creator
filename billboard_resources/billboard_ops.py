@@ -148,11 +148,60 @@ class RenderAtlasButton(bpy.types.Operator):
 
 		return True
 
+	def bakeSelectedOptions(self):
+
+		# some shorthand for common objects
+		scene = bpy.context.scene
+		t = scene.gs_template
+		obj_active = scene.objects.active
+		
+		# start bakes
+		if scene.gs_settings.diffuse:
+
+			fName = obj_active.name +"_d.png"
+			fPath = os.path.join(scene.gs_billboard_path, fName)
+
+			bpy.ops.object.bake(
+				type='DIFFUSE', 
+				pass_filter={'COLOR'}, 
+				filepath=fPath, 
+				width=1024, height=1024, 
+				margin=1, 
+				use_selected_to_active=True, 
+				save_mode='INTERNAL', 
+				use_split_materials=False
+				)
+			image = bpy.data.images["BillboardBaker"]
+			image.filepath_raw = fPath
+			image.save()
+
+		# start bakes
+		if scene.gs_settings.normal:
+
+			fName = obj_active.name +"_n.png"
+			fPath = os.path.join(scene.gs_billboard_path, fName)
+
+			bpy.ops.object.bake(
+				type='NORMAL', 
+				pass_filter={'COLOR'}, 
+				filepath=fPath, 
+				width=1024, height=1024, 
+				margin=1, 
+				use_selected_to_active=True, 
+				save_mode='INTERNAL', 
+				use_split_materials=False
+				)
+			image = bpy.data.images["BillboardBaker"]
+			image.filepath_raw = fPath
+			image.save()
+
+
 	def execute(self, context):
 
 		# some shorthand for common objects
 		scene = bpy.context.scene
 		t = scene.gs_template
+		obj_active = scene.objects.active
 
 		# check objects are selected
 		if len(scene.objects) > 0 and scene.objects.active is not None:
@@ -171,27 +220,8 @@ class RenderAtlasButton(bpy.types.Operator):
 		else:
 			logging.warning("billboard template not defined")
 
-
-		# start bakes
-		if scene.gs_settings.diffuse:
-
-			fName = scene.objects.active.name +"_d.png"
-			fPath = os.path.join(scene.gs_billboard_path, fName)
-
-			bpy.ops.object.bake(
-				type='DIFFUSE', 
-				pass_filter={'COLOR'}, 
-				filepath=fPath, 
-				width=1024, height=1024, 
-				margin=1, 
-				use_selected_to_active=True, 
-				save_mode='INTERNAL', 
-				use_split_materials=False
-				)
-			image = bpy.data.images["BillboardBaker"]
-			image.filepath_raw = fPath
-			image.save()
-			#bpy.ops.object.bake_image()
+		# do it
+		self.bakeSelectedOptions()
 
 		return {"FINISHED"}
 
