@@ -154,7 +154,7 @@ class RenderAtlasButton(bpy.types.Operator):
 		scene = bpy.context.scene
 		t = scene.gs_template
 		obj_active = scene.objects.active
-		
+
 		# start bakes
 		if scene.gs_settings.diffuse:
 
@@ -195,6 +195,9 @@ class RenderAtlasButton(bpy.types.Operator):
 			image.filepath_raw = fPath
 			image.save()
 
+		if scene.gs_settings.unityComponent:
+			from . import billboard_unity
+			billboard_unity.writeUnityComponent()
 
 	def execute(self, context):
 

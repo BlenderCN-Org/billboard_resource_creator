@@ -34,9 +34,11 @@ if "bpy" in locals():
 	import importlib
 	importlib.reload(billboard_ops)
 	importlib.reload(billboard_ui)
+	importlib.reload(billboard_unity)
 else:
 	from .billboard_resources import billboard_ops
 	from .billboard_resources import billboard_ui
+	from .billboard_resources import billboard_unity
 
 import bpy, os, logging, traceback
 
