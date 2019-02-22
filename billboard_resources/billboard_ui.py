@@ -18,10 +18,11 @@ Created by GameSolids
 
 '''
 
-import bpy
+import bpy, logging
 from bpy.props import FloatVectorProperty, StringProperty, BoolProperty
 
 class BillboardResourcesPanel(bpy.types.Panel):
+	''' UI Panel for creating billboard assets '''
 	bl_idname = "VIEW_3D_PT_billboard_resources"
 	bl_label = "Billboard Resources"
 	bl_space_type = 'VIEW_3D'
@@ -29,11 +30,14 @@ class BillboardResourcesPanel(bpy.types.Panel):
 	bl_context = "view3d"
 
 	def draw(self, context):
+		''' display logic and layout '''
+		##TODO: make this more friendly
 		scene = context.scene               
 		layout = self.layout
 		layout.prop(scene, "gs_billboard_path")
-		#layout.prop_search(scene, "gs_billboard_mesh", scene, "objects")
-		layout.operator("gs_billboard.check_settings")
+		layout.prop_search(scene.gs_template, "billboard_object", scene, "objects")
+		layout.prop_search(scene.gs_template, "billboard_cage", scene, "objects")
+		layout.operator("gs_billboard.template_setup")
 		layout.label(text="Export Options")
 		layout.prop(scene.gs_settings, "diffuse")
 		layout.prop(scene.gs_settings, "normal")

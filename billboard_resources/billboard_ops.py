@@ -18,12 +18,12 @@ Created by GameSolids
 
 '''
 
-import bpy, os
+import bpy, os, logging
 from os import path
 from operator import itemgetter
 from bpy.props import FloatVectorProperty, StringProperty, BoolProperty
 
-#bpy.ops.mesh.quads_convert_to_tris()
+SCRIPT_DIR = os.path.dirname(os.path.realpath(__file__))
 
 class gs_export_options(bpy.types.PropertyGroup):
 	'''Items that will be created at export'''
@@ -86,6 +86,11 @@ class gs_template_objects(bpy.types.PropertyGroup):
 		default=""
 		)
 
+	billboard_cage_material = bpy.props.StringProperty(
+		name="Cage.Material",
+		default=""
+		)
+
 class RenderAtlasButton(bpy.types.Operator):
 	''' Bake the textures, and write the files '''
 	bl_idname = "gs_billboard.render_atlas"
@@ -99,13 +104,18 @@ class RenderAtlasButton(bpy.types.Operator):
 
 	def execute(self, context):
 
+		# check objects are selected
+		if len(scene.objects) > 0:
+			if scene.objects.active is not None:
+				logging.info(scene.objects.active.name)
+
 		return {"FINISHED"}
 
 
 class CheckSetupButton(bpy.types.Operator):
 	''' Checks current Scene for Billboard Mesh and Cage,
 		add them if not found. '''
-	bl_idname = "gs_billboard.check_settings"
+	bl_idname = "gs_billboard.template_setup"
 	bl_label = "Setup Billboard Rig"
 	bl_description = ""
 	bl_options = {"REGISTER"}
@@ -124,17 +134,12 @@ class CheckSetupButton(bpy.types.Operator):
 
 	def appendFromTemplate(self,context,typePath):
 		'''opens addon template items'''
-		script_file = os.path.realpath(__file__)
-		directory = os.path.dirname(script_file)
-
 		t = bpy.context.scene.gs_template
-
-		t.file = os.path.join(directory, "template.blend")
+		# get template file in Addon directory
+		t.file = os.path.join(SCRIPT_DIR, "template.blend")
 		t.section = "\\"+typePath[0]+"\\"
 
-		if typePath[1] is "Billboard":
-			t.billboard_object = "Billboard"
-
+		# append Bleder necessary blender objects
 		t_filepath  = t.file + t.section + typePath[1]
 		t_directory = t.file + t.section
 		t_filename  = typePath[1]
@@ -144,6 +149,10 @@ class CheckSetupButton(bpy.types.Operator):
 			filename=t_filename,
 			directory=t_directory
 			)
+
+		logging.info(typePath[1]+" loaded from template")
+
+		return typePath[1]
 
 	def execute(self, context):
 		#find our active 3dView port
@@ -156,17 +165,44 @@ class CheckSetupButton(bpy.types.Operator):
 						context_override['area'] = area
 						context_override['region'] = region
 						# context_override now refferrs to the Active View3D
+		
+		logging.info("Starting setup helper...")
 
-		print(bpy.context.scene.objects.active.name)
+		scene = bpy.context.scene
+		t = scene.gs_template
 
-		#only link template items if we haven't assigned them already
-		if bpy.context.scene.gs_template.billboard_object is "":
-			self.appendFromTemplate(context,("Object","Billboard"))
-			self.appendFromTemplate(context,("Object","BillboardCage"))
-			self.appendFromTemplate(context,("Material","Billboard_material"))
+		''' only link template items if we haven't assigned them already
+			check1 is to see if anything has been assigned
+			check2 is to see if user-defined objects has been assigned 
+		'''
+		gs_bb_check1 = t.billboard_object is ""
+		gs_bb_check2 = t.billboard_object not in scene.objects
+		if gs_bb_check1 and gs_bb_check2 :
+			t.billboard_object = self.appendFromTemplate(
+				context,("Object","Billboard")
+				)
 		else:
-			print("doyle")
+			logging.info("Using current Billboard: name here")
 
+		gs_bc_check1 = t.billboard_cage is ""
+		gs_bc_check2 = t.billboard_cage not in scene.objects
+		if gs_bc_check1 and gs_bc_check2 :
+			t.billboard_cage = self.appendFromTemplate(
+				context,("Object","BillboardCage")
+				)
+		else:
+			logging.info("Using current BillboardCage")
+
+		gs_bm_check1 = t.billboard_cage_material is ""
+		gs_bm_check2 = t.billboard_cage_material not in bpy.data.materials
+		if gs_bm_check1 and gs_bm_check2 :
+			t.billboard_cage_material = self.appendFromTemplate(
+				context,("Material","Billboard_material")
+				)
+		else:
+			logging.info("Using current Material")
+		
+		logging.info("Setup helper done")
 		return {"FINISHED"}
 
 
@@ -174,13 +210,9 @@ def initSceneProperties():
 	# File path matches the Unity Example
 	bpy.types.Scene.gs_billboard_path = bpy.props.StringProperty(
 		name = "Export Path", 
-		default = "./",
+		default = "//",
 		subtype='DIR_PATH'
 		)
-
-	bpy.types.Scene.gs_billboard_mesh = bpy.props.StringProperty(
-		name = "Billboard"
-		) #?
 
 	bpy.types.Scene.gs_settings = bpy.props.PointerProperty(
 		type=gs_export_options

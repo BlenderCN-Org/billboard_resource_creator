@@ -17,7 +17,6 @@ Created by GameSolids
 	Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
 '''
-
 bl_info = {
 	"name": "Billboard Resource Creator",
 	"description": "Creates texture atlas and like for 3d billboards",
@@ -30,6 +29,7 @@ bl_info = {
 	"category": "Import-Export" 
 }
 
+''' module imports and reloading '''
 if "bpy" in locals():
 	import importlib
 	importlib.reload(billboard_ops)
@@ -38,28 +38,49 @@ else:
 	from .billboard_resources import billboard_ops
 	from .billboard_resources import billboard_ui
 
-import bpy
+import bpy, os, logging, traceback
 
 
-# register
+''' Settings and Addon options that 
+	help with debugging and development.'''
+LOG_TO_FILE = True
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+
+''' debug logging '''
+if LOG_TO_FILE is True:
+	logging.basicConfig(
+		filename=os.path.join(SCRIPT_DIR,'example.log'),
+		level=logging.DEBUG
+		)
+	logging.getLogger().addHandler(logging.StreamHandler())
+else:
+	logging.basicConfig(format='%(message)s',level=logging.INFO)
+
+
+# registration hooks
 ##################################
-
-import traceback
-
 def register():
-
+	''' start registering Blender components'''
 	try: bpy.utils.register_module(__name__)
-	except: traceback.print_exc()
+	except: logging.error(traceback.message)
 
-	billboard_ops.initSceneProperties()
-	
-	print("Registered {} with {} modules".format(bl_info["name"], str(2)))
+	try: billboard_ops.initSceneProperties()
+	except: logging.error(traceback.message)
+
+	''' presume normal operation'''
+	logging.info(
+		"Registered {} with {} modules".
+		format(bl_info["name"], str(2))
+		)
 
 
 def unregister():
+	''' remove Blender components when disabling addon'''
 	try: bpy.utils.unregister_module(__name__)
 	except: traceback.print_exc()
 
-	print("Unregistered {}".format(bl_info["name"]))
+	logging.info(
+		"Unregistered {}".
+		format(bl_info["name"])
+		)
 
-	#del bpy.types.Object.billboard_mesh
