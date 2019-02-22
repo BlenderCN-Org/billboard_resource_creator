@@ -43,6 +43,6 @@ class BillboardResourcesPanel(bpy.types.Panel):
 		layout.prop(scene.gs_settings, "normal")
 		layout.prop(scene.gs_settings, "ambio")
 		layout.prop(scene.gs_settings, "unityComponent")
-		layout.prop(scene.gs_settings, "unrealComponent")
+		#layout.prop(scene.gs_settings, "unrealComponent")
 		layout.operator("gs_billboard.render_atlas", text="Export Package")
 

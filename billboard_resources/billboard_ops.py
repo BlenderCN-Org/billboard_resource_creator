@@ -91,6 +91,7 @@ class gs_template_objects(bpy.types.PropertyGroup):
 		default=""
 		)
 
+
 class RenderAtlasButton(bpy.types.Operator):
 	''' Bake the textures, and write the files '''
 	bl_idname = "gs_billboard.render_atlas"
@@ -101,13 +102,96 @@ class RenderAtlasButton(bpy.types.Operator):
 	@classmethod
 	def poll(cls, context):
 		return True
+	
+	def ShowMessageBox(self, message = "", title = "Notice: ", icon = 'INFO'):
+		''' Simple message alert box '''
+
+		def draw(self, context):
+			self.layout.label(message)
+		
+		bpy.context.window_manager.popup_menu(draw, title = title, icon = icon)
+
+	def setSelection(self, context):
+		''' Setup Baking selection, activate cage '''
+
+		# some shorthand for common objects
+		scene = bpy.context.scene
+		t = scene.gs_template
+
+		# store selected objects
+		obj_active = scene.objects.active
+		selection = bpy.context.selected_objects
+
+		# check selected objects
+		if len(selection) > 0:
+			if t.billboard_cage is not "":
+				scene.objects[t.billboard_cage].select = True
+				scene.objects.active = scene.objects[t.billboard_cage]
+				return True
+			else: 
+				self.ShowMessageBox("You need to set Billboard and BillboardCage")
+				logging.warning("Scene not setup correctly")
+		else: 
+			self.ShowMessageBox("You need to select at least one mesh object.")
+			logging.warning("No objects were selected")
+
+
+		return False
+
+	def hasImage(self, context):
+		''' Select or Create image to bake to '''
+		image = bpy.data.images["BillboardBaker"]
+		
+		#if image is None:
+		#	image = bpy.data.images.new("BillboardBaker", width=1024, height=1024)
+
+
+		return True
 
 	def execute(self, context):
 
+		# some shorthand for common objects
+		scene = bpy.context.scene
+		t = scene.gs_template
+
 		# check objects are selected
-		if len(scene.objects) > 0:
-			if scene.objects.active is not None:
-				logging.info(scene.objects.active.name)
+		if len(scene.objects) > 0 and scene.objects.active is not None:
+				logging.info("Setting up baking for: "+scene.objects.active.name)
+
+				# check material image is available
+				if self.setSelection(context) and self.hasImage(context):
+					# make sure cage UV is mapped for baking
+					for uv_face in scene.objects.active.data.uv_textures["UVMap"].data:
+						uv_face.image = bpy.data.images["BillboardBaker"]
+
+					logging.info("Bake starting...")
+
+				else:
+					logging.info("Baking Canceled")
+		else:
+			logging.warning("billboard template not defined")
+
+
+		# start bakes
+		if scene.gs_settings.diffuse:
+
+			fName = scene.objects.active.name +"_d.png"
+			fPath = os.path.join(scene.gs_billboard_path, fName)
+
+			bpy.ops.object.bake(
+				type='DIFFUSE', 
+				pass_filter={'COLOR'}, 
+				filepath=fPath, 
+				width=1024, height=1024, 
+				margin=1, 
+				use_selected_to_active=True, 
+				save_mode='INTERNAL', 
+				use_split_materials=False
+				)
+			image = bpy.data.images["BillboardBaker"]
+			image.filepath_raw = fPath
+			image.save()
+			#bpy.ops.object.bake_image()
 
 		return {"FINISHED"}
 
@@ -119,27 +203,39 @@ class CheckSetupButton(bpy.types.Operator):
 	bl_label = "Setup Billboard Rig"
 	bl_description = ""
 	bl_options = {"REGISTER"}
-
+	
 	@classmethod
 	def poll(cls, context):
 		return True
 
-	def appendObject(self,context,name):
+	def findActiveView3D(self, context):
 		
-		return
-
-	def appendMaterial(self, context, name):
+		#find our active 3dView port
+		for area in bpy.context.screen.areas:
+			if area.type == 'VIEW_3D':
+				for region in area.regions:
+					if region.type == 'WINDOW':
+						#move cursor to Interest point, update view port
+						context_override = bpy.context.copy()
+						context_override['area'] = area
+						context_override['region'] = region
+						# context_override now refferrs to the Active View3D
 		
-		return
+						return context_override
+		return None
 
 	def appendFromTemplate(self,context,typePath):
-		'''opens addon template items'''
-		t = bpy.context.scene.gs_template
-		# get template file in Addon directory
+		''' copy object presets from blender file '''
+
+		# some shorthand for common objects
+		scene = bpy.context.scene
+		t = scene.gs_template
+
+		# open template file in Addon directory
 		t.file = os.path.join(SCRIPT_DIR, "template.blend")
 		t.section = "\\"+typePath[0]+"\\"
 
-		# append Bleder necessary blender objects
+		# append necessary blender objects
 		t_filepath  = t.file + t.section + typePath[1]
 		t_directory = t.file + t.section
 		t_filename  = typePath[1]
@@ -155,25 +251,20 @@ class CheckSetupButton(bpy.types.Operator):
 		return typePath[1]
 
 	def execute(self, context):
-		#find our active 3dView port
-		for area in bpy.context.screen.areas:
-			if area.type == 'VIEW_3D':
-				for region in area.regions:
-					if region.type == 'WINDOW':
-						#move cursor to Interest point, update view port
-						context_override = bpy.context.copy()
-						context_override['area'] = area
-						context_override['region'] = region
-						# context_override now refferrs to the Active View3D
-		
-		logging.info("Starting setup helper...")
 
+		# some shorthand for common objects
 		scene = bpy.context.scene
 		t = scene.gs_template
 
+		# store selection
+		obj_active = scene.objects.active
+		selection = bpy.context.selected_objects
+
+		logging.info("Starting setup helper...")
+
 		''' only link template items if we haven't assigned them already
-			check1 is to see if anything has been assigned
-			check2 is to see if user-defined objects has been assigned 
+			check1 is to see if billboard exists
+			check2 is to see if user-defined billboard has been assigned 
 		'''
 		gs_bb_check1 = t.billboard_object is ""
 		gs_bb_check2 = t.billboard_object not in scene.objects
@@ -193,6 +284,7 @@ class CheckSetupButton(bpy.types.Operator):
 		else:
 			logging.info("Using current BillboardCage")
 
+		# ensure material makes it, regardless of global import settings
 		gs_bm_check1 = t.billboard_cage_material is ""
 		gs_bm_check2 = t.billboard_cage_material not in bpy.data.materials
 		if gs_bm_check1 and gs_bm_check2 :
@@ -202,7 +294,13 @@ class CheckSetupButton(bpy.types.Operator):
 		else:
 			logging.info("Using current Material")
 		
+		# retrieve selection
+		scene.objects.active = obj_active
+		for obj in selection:
+			obj.select = True
+
 		logging.info("Setup helper done")
+
 		return {"FINISHED"}
 
 
@@ -210,7 +308,7 @@ def initSceneProperties():
 	# File path matches the Unity Example
 	bpy.types.Scene.gs_billboard_path = bpy.props.StringProperty(
 		name = "Export Path", 
-		default = "//",
+		default = os.path.join(os.path.expanduser('~'), "billboard"+os.path.sep),
 		subtype='DIR_PATH'
 		)
 
@@ -221,6 +319,8 @@ def initSceneProperties():
 	bpy.types.Scene.gs_template = bpy.props.PointerProperty(
 		type=gs_template_objects
 		)
+
+	logging.info("Scene Properties have been added")
 
 	return
 
