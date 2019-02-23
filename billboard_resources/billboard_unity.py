@@ -18,8 +18,8 @@ Created by GameSolids
 
 '''
 
-import bpy
-from os import path
+import bpy, os
+#from os import path
 from operator import itemgetter
 
 def writeUnityComponent():
@@ -28,8 +28,13 @@ def writeUnityComponent():
 	#ob = bpy.context.object
 	ob = bpy.context.scene.objects["Billboard"]
 
+	#obj_active = bpy.context.scene.objects.active
+	scene = bpy.context.scene
+	fName = "BillboardBaker.cs"
+	fPath = os.path.join(scene.gs_billboard_path, fName)
+
 	# Build a Unity Component file in C#.
-	with open("{tpath}".format(tpath=path.join(path.dirname(path.dirname(bpy.path.abspath('//'))), "Scripts/BillboardBaker.cs")), "w") as file:
+	with open("{tpath}".format(tpath=fPath), "w") as file:
 		
 		# C# includes
 		c_includes = ["System.Collections","System.Collections.Generic","System.IO","UnityEditor","UnityEngine"]
