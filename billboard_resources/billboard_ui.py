@@ -18,7 +18,7 @@ Created by GameSolids
 
 '''
 
-import bpy, logging
+import bpy, os, logging
 from bpy.props import FloatVectorProperty, StringProperty, BoolProperty
 
 class BillboardResourcesPanel(bpy.types.Panel):
@@ -28,7 +28,6 @@ class BillboardResourcesPanel(bpy.types.Panel):
 	bl_space_type = 'VIEW_3D'
 	bl_region_type = 'UI'
 	bl_context = "view3d"
-
 	def draw(self, context):
 		''' display logic and layout '''
 		##TODO: make this more friendly
@@ -37,12 +36,33 @@ class BillboardResourcesPanel(bpy.types.Panel):
 		layout.prop(scene, "gs_billboard_path")
 		layout.prop_search(scene.gs_template, "billboard_object", scene, "objects")
 		layout.prop_search(scene.gs_template, "billboard_cage", scene, "objects")
-		layout.operator("gs_billboard.template_setup")
+
+		row = layout.row()
+
+		#row.prop(scene.gs_template,"group_path")
+		row.operator_context = 'INVOKE_DEFAULT'
+		row.operator("gs_billboard.template_setup")
+		#row.operator("wm.appended")
+
+		row.operator("gs_billboard.template_clear")
+
 		layout.label(text="Export Options")
-		layout.prop(scene.gs_settings, "diffuse")
-		layout.prop(scene.gs_settings, "normal")
-		layout.prop(scene.gs_settings, "ambio")
+
+		layout.prop(scene.gs_settings, "filename")
+
+		row = layout.row()
+		row.prop(scene.gs_settings, "diffuse")
+		row.prop(scene.gs_settings, "diffuse_sfx")
+		row = layout.row()
+		row.prop(scene.gs_settings, "normal")
+		row.prop(scene.gs_settings, "normal_sfx")
+		row = layout.row()
+		row.prop(scene.gs_settings, "ambio")
+		row.prop(scene.gs_settings, "ambio_sfx")
+
 		layout.prop(scene.gs_settings, "unityComponent")
 		#layout.prop(scene.gs_settings, "unrealComponent")
+
 		layout.operator("gs_billboard.render_atlas", text="Export Package")
+
 

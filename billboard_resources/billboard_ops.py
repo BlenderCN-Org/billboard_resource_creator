@@ -21,7 +21,8 @@ Created by GameSolids
 import bpy, os, logging
 from os import path
 from operator import itemgetter
-from bpy.props import FloatVectorProperty, StringProperty, BoolProperty
+from bpy.props import FloatVectorProperty, StringProperty, BoolProperty, EnumProperty
+from bpy_extras.io_utils import ImportHelper
 
 SCRIPT_DIR = os.path.dirname(os.path.realpath(__file__))
 
@@ -29,19 +30,36 @@ class gs_export_options(bpy.types.PropertyGroup):
 	'''Items that will be created at export'''
 	
 	# diffuse texture atlas
+	filename = bpy.props.StringProperty(
+		name="Base Name",
+		default="billboard_name"
+		)
+	# diffuse texture atlas
 	diffuse = bpy.props.BoolProperty(
 		name="Diffuse",
 		default=True
+		)
+	diffuse_sfx = bpy.props.StringProperty(
+		name=" ",
+		default="_d"
 		)
 	# normals map texture atlas
 	normal = bpy.props.BoolProperty(
 		name="Normals",
 		default=True
 		)
+	normal_sfx = bpy.props.StringProperty(
+		name=" ",
+		default="_n"
+		)
 	# ambient occlusion texture atlas
 	ambio = bpy.props.BoolProperty(
 		name="AmbientOcclusion",
 		default=False
+		)
+	ambio_sfx = bpy.props.StringProperty(
+		name=" ",
+		default="_ao"
 		)
 	# Unity3D component for assembling the billboard
 	# as a Unity BillboardAsset
@@ -76,6 +94,12 @@ class gs_template_objects(bpy.types.PropertyGroup):
 		default=""
 		)
 
+	group_path = bpy.props.StringProperty(
+		name="Template.Path",
+		default=os.path.join(SCRIPT_DIR, "template.blend"),
+		subtype='FILE_PATH'
+		)
+
 	billboard_object = bpy.props.StringProperty(
 		name="Billboard",
 		default=""
@@ -90,6 +114,8 @@ class gs_template_objects(bpy.types.PropertyGroup):
 		name="Cage.Material",
 		default=""
 		)
+
+
 
 
 class RenderAtlasButton(bpy.types.Operator):
@@ -229,13 +255,15 @@ class RenderAtlasButton(bpy.types.Operator):
 		return {"FINISHED"}
 
 
-class CheckSetupButton(bpy.types.Operator):
+class SetupTemplateButton(bpy.types.Operator):
 	''' Checks current Scene for Billboard Mesh and Cage,
 		add them if not found. '''
 	bl_idname = "gs_billboard.template_setup"
-	bl_label = "Setup Billboard Rig"
-	bl_description = ""
+	bl_label = "Setup Default Rig"
 	bl_options = {"REGISTER"}
+
+	instance_groups = True
+	directory = ""
 	
 	@classmethod
 	def poll(cls, context):
@@ -283,7 +311,44 @@ class CheckSetupButton(bpy.types.Operator):
 
 		return typePath[1]
 
+
+
 	def execute(self, context):
+		self.directory = os.path.join(SCRIPT_DIR, "template.blend\\Group\\")
+		
+		op = bpy.ops.wm.append('INVOKE_DEFAULT', directory=self.directory)
+		
+		print(dir(op))
+		
+		# some shorthand for common objects
+		scene = bpy.context.scene
+		t = scene.gs_template
+
+		# store selection
+		obj_active = scene.objects.active
+		selection = bpy.context.selected_objects
+
+		logging.info("Starting setup helper...")
+
+		''' only link template items if we haven't assigned them already
+			check1 is to see if billboard exists
+			check2 is to see if user-defined billboard has been assigned 
+		'''
+		gs_bb_check1 = t.billboard_object is ""
+		gs_bb_check2 = t.billboard_object in bpy.data.objects
+		if gs_bb_check1:
+			t.billboard_object = "Billboard"
+			logging.info("Using current Billboard: name here")
+		
+		else:
+			t.billboard_object = bpy.data.objects['Billboard']
+			logging.info("Using new Billboard: name here")
+
+
+		return {"FINISHED"}
+
+
+	def executes(self, context):
 
 		# some shorthand for common objects
 		scene = bpy.context.scene
@@ -337,8 +402,31 @@ class CheckSetupButton(bpy.types.Operator):
 		return {"FINISHED"}
 
 
+
+class ClearTemplateButton(bpy.types.Operator):
+	''' Checks current Scene for Billboard Mesh and Cage,
+		add them if not found. '''
+	bl_idname = "gs_billboard.template_clear"
+	bl_label = "Clear Rig"
+	bl_description = ""
+	bl_options = {"REGISTER"}
+	
+	@classmethod
+	def poll(cls, context):
+		return True
+
+	def execute(self, context):
+
+		return {"FINISHED"}
+
+
 def initSceneProperties():
 	# File path matches the Unity Example
+
+	bpy.types.Scene.gs_template = bpy.props.PointerProperty(
+		type=gs_template_objects
+		)
+
 	bpy.types.Scene.gs_billboard_path = bpy.props.StringProperty(
 		name = "Export Path", 
 		default = os.path.join(os.path.expanduser('~'), "billboard"+os.path.sep),
@@ -349,10 +437,7 @@ def initSceneProperties():
 		type=gs_export_options
 		)
 
-	bpy.types.Scene.gs_template = bpy.props.PointerProperty(
-		type=gs_template_objects
-		)
-
+	
 	logging.info("Scene Properties have been added")
 
 	return
