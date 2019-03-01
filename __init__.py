@@ -41,6 +41,7 @@ else:
 	from .billboard_resources import billboard_unity
 
 import bpy, os, logging, traceback
+from bpy.props import IntProperty, CollectionProperty
 
 
 ''' Settings and Addon options that 
@@ -68,11 +69,12 @@ def register():
 
 	try: billboard_ops.initSceneProperties()
 	except: logging.error(traceback.message)
+	
 
 	''' presume normal operation'''
 	logging.info(
 		"Registered {} with {} modules".
-		format(bl_info["name"], str(2))
+		format(bl_info["name"], str(3))
 		)
 
 
@@ -80,6 +82,9 @@ def unregister():
 	''' remove Blender components when disabling addon'''
 	try: bpy.utils.unregister_module(__name__)
 	except: traceback.print_exc()
+
+	del bpy.types.Scene.custom
+	del bpy.types.Scene.custom_index
 
 	logging.info(
 		"Unregistered {}".

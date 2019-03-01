@@ -38,24 +38,21 @@ class BillboardResourcesPanel(bpy.types.Panel):
 		layout.prop_search(scene.gs_template, "billboard_cage", scene, "objects")
 
 		row = layout.row()
-
-		#row.prop(scene.gs_template,"group_path")
-		row.operator_context = 'INVOKE_DEFAULT'
+		
 		row.operator("gs_billboard.template_setup")
-		#row.operator("wm.appended")
-
 		row.operator("gs_billboard.template_clear")
 
 		layout.label(text="Export Options")
-
 		layout.prop(scene.gs_settings, "filename")
 
 		row = layout.row()
 		row.prop(scene.gs_settings, "diffuse")
 		row.prop(scene.gs_settings, "diffuse_sfx")
+
 		row = layout.row()
 		row.prop(scene.gs_settings, "normal")
 		row.prop(scene.gs_settings, "normal_sfx")
+
 		row = layout.row()
 		row.prop(scene.gs_settings, "ambio")
 		row.prop(scene.gs_settings, "ambio_sfx")

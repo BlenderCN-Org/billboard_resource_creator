@@ -21,7 +21,7 @@ Created by GameSolids
 import bpy, os, logging
 from os import path
 from operator import itemgetter
-from bpy.props import FloatVectorProperty, StringProperty, BoolProperty, EnumProperty
+from bpy.props import CollectionProperty, FloatVectorProperty, StringProperty, BoolProperty, EnumProperty, IntProperty
 from bpy_extras.io_utils import ImportHelper
 
 SCRIPT_DIR = os.path.dirname(os.path.realpath(__file__))
@@ -116,6 +116,9 @@ class gs_template_objects(bpy.types.PropertyGroup):
 		)
 
 
+class ObjectRefItem(bpy.types.PropertyGroup):
+	name = bpy.props.StringProperty(name="Object Name", default="Unknown")
+	ref = bpy.props.IntProperty(name="Ref", default=22, subtype='UNSIGNED')
 
 
 class RenderAtlasButton(bpy.types.Operator):
@@ -255,15 +258,34 @@ class RenderAtlasButton(bpy.types.Operator):
 		return {"FINISHED"}
 
 
+def item_getter(self, context):
+	filepath = os.path.join(SCRIPT_DIR, "template.blend")
+	with bpy.data.libraries.load(filepath) as (data_from, data_to):
+		#data_to.groups = data_from.groups
+		pass
+
+	# now operate directly on the loaded data
+	for group in range(len(data_from.groups)):
+		if group is not None:
+			print(data_from.groups[group])
+			yield (str(group), data_from.groups[group], "")
+
+
+
+
 class SetupTemplateButton(bpy.types.Operator):
 	''' Checks current Scene for Billboard Mesh and Cage,
 		add them if not found. '''
 	bl_idname = "gs_billboard.template_setup"
 	bl_label = "Setup Default Rig"
-	bl_options = {"REGISTER"}
+	#bl_options = {'REGISTER', 'UNDO'}
 
+	my_enum = bpy.props.EnumProperty(items=item_getter)
+	
 	instance_groups = True
 	directory = ""
+	filepath = ""
+	filename = ""
 	
 	@classmethod
 	def poll(cls, context):
@@ -312,14 +334,35 @@ class SetupTemplateButton(bpy.types.Operator):
 		return typePath[1]
 
 
+	def invoke(self, context, event):
+		self.directory = os.path.join(SCRIPT_DIR, "template.blend\\Group\\")
+
+		#op = bpy.ops.wm.append('INVOKE_DEFAULT', directory=self.directory)
+		#print(dir(op))
+
+		#return op
+		#wm = context.window_manager
+		#return wm.invoke_props_popup(self, event)
+		scn = bpy.context.scene
+		scn.custom.clear()
+		for index, name, _ in item_getter(self, context):
+			item = scn.custom.add()
+			item.ref = int(index)
+			item.name = name
+
+		wm = context.window_manager
+		return wm.invoke_props_dialog(self, width=800, height=800)
+	
+	def draw(self, context):
+		layout = self.layout
+		scn = bpy.context.scene
+
+		col = layout.column()
+		col.template_list("UI_UL_list", "example_dialog", scn, "custom", scn, "custom_index", rows=4)
 
 	def execute(self, context):
-		self.directory = os.path.join(SCRIPT_DIR, "template.blend\\Group\\")
 		
-		op = bpy.ops.wm.append('INVOKE_DEFAULT', directory=self.directory)
-		
-		print(dir(op))
-		
+
 		# some shorthand for common objects
 		scene = bpy.context.scene
 		t = scene.gs_template
@@ -334,15 +377,23 @@ class SetupTemplateButton(bpy.types.Operator):
 			check1 is to see if billboard exists
 			check2 is to see if user-defined billboard has been assigned 
 		'''
+		print(self.directory)
+		print(self.filename)
+
+		scn = bpy.context.scene
+		index = scn.custom_index
+		message = '%s (index %d) selected' % (scn.custom[index].name, index)
+		self.report({'INFO'}, message)
+
 		gs_bb_check1 = t.billboard_object is ""
 		gs_bb_check2 = t.billboard_object in bpy.data.objects
 		if gs_bb_check1:
 			t.billboard_object = "Billboard"
-			logging.info("Using current Billboard: name here")
+			logging.info("Using new Billboard: name here")
 		
 		else:
-			t.billboard_object = bpy.data.objects['Billboard']
-			logging.info("Using new Billboard: name here")
+			t.billboard_object = bpy.data.objects['Billboard'].name
+			logging.info("Using current Billboard: name here")
 
 
 		return {"FINISHED"}
@@ -437,7 +488,9 @@ def initSceneProperties():
 		type=gs_export_options
 		)
 
-	
+	bpy.types.Scene.custom = CollectionProperty(type=ObjectRefItem)
+	bpy.types.Scene.custom_index = IntProperty()
+
 	logging.info("Scene Properties have been added")
 
 	return
