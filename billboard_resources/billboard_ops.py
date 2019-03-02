@@ -80,6 +80,12 @@ class gs_export_options(bpy.types.PropertyGroup):
 		default=False
 		)
 
+class ListItem(bpy.types.PropertyGroup):
+	''' simple struct to add Index to set of Strings '''
+	name = bpy.props.StringProperty(name="Object Name", default="Unknown")
+	index = bpy.props.IntProperty(name="Ref", default=22, subtype='UNSIGNED')
+
+
 
 class gs_template_objects(bpy.types.PropertyGroup):
 	'''Items that are stored as blender objects'''
@@ -92,12 +98,6 @@ class gs_template_objects(bpy.types.PropertyGroup):
 	section = bpy.props.StringProperty(
 		name="Section",
 		default=""
-		)
-
-	group_path = bpy.props.StringProperty(
-		name="Template.Path",
-		default=os.path.join(SCRIPT_DIR, "template.blend"),
-		subtype='FILE_PATH'
 		)
 
 	billboard_object = bpy.props.StringProperty(
@@ -115,11 +115,41 @@ class gs_template_objects(bpy.types.PropertyGroup):
 		default=""
 		)
 
+	group_objects = bpy.props.CollectionProperty(
+		type=ListItem
+		)
 
-class ObjectRefItem(bpy.types.PropertyGroup):
-	name = bpy.props.StringProperty(name="Object Name", default="Unknown")
-	ref = bpy.props.IntProperty(name="Ref", default=22, subtype='UNSIGNED')
+	name = bpy.props.CollectionProperty(
+		type=ListItem
+		)
 
+	index = bpy.props.IntProperty()
+
+
+def DialogSimple(self, context, message = "", title = "Notice: ", icon = 'INFO'):
+	''' Simple message alert box '''
+
+	def draw(self, context):
+		self.layout.label(message)
+	
+	bpy.context.window_manager.popup_menu(draw, title = title, icon = icon)
+
+class DialogConfirm(bpy.types.Operator):
+    """ This will over write your current settings. """
+    bl_idname = "my_category.custom_confirm_dialog"
+    bl_label = "Over write current template?"
+    bl_options = {'REGISTER', 'INTERNAL'}
+
+    @classmethod
+    def poll(cls, context):
+        return True
+
+    def execute(self, context):
+        self.report({'INFO'}, "CONTINUE")
+        return {'FINISHED'}
+
+    def invoke(self, context, event):
+        return context.window_manager.invoke_confirm(self, event)
 
 class RenderAtlasButton(bpy.types.Operator):
 	''' Bake the textures, and write the files '''
@@ -132,14 +162,6 @@ class RenderAtlasButton(bpy.types.Operator):
 	def poll(cls, context):
 		return True
 	
-	def ShowMessageBox(self, message = "", title = "Notice: ", icon = 'INFO'):
-		''' Simple message alert box '''
-
-		def draw(self, context):
-			self.layout.label(message)
-		
-		bpy.context.window_manager.popup_menu(draw, title = title, icon = icon)
-
 	def setSelection(self, context):
 		''' Setup Baking selection, activate cage '''
 
@@ -158,10 +180,10 @@ class RenderAtlasButton(bpy.types.Operator):
 				scene.objects.active = scene.objects[t.billboard_cage]
 				return True
 			else: 
-				self.ShowMessageBox("You need to set Billboard and BillboardCage")
+				ShowMessageBox(self, context, "You need to set Billboard and BillboardCage")
 				logging.warning("Scene not setup correctly")
 		else: 
-			self.ShowMessageBox("You need to select at least one mesh object.")
+			ShowMessageBox(self, context, "You need to select at least one mesh object.")
 			logging.warning("No objects were selected")
 
 
@@ -258,18 +280,25 @@ class RenderAtlasButton(bpy.types.Operator):
 		return {"FINISHED"}
 
 
-def item_getter(self, context):
+def group_getter(self, context):
 	filepath = os.path.join(SCRIPT_DIR, "template.blend")
 	with bpy.data.libraries.load(filepath) as (data_from, data_to):
-		#data_to.groups = data_from.groups
-		pass
+		# operate directly on external data
+		for group in range(len(data_from.groups)):
+			if group is not None:
+				print(data_from.groups[group])
+				yield (str(group), data_from.groups[group], "")
 
-	# now operate directly on the loaded data
-	for group in range(len(data_from.groups)):
-		if group is not None:
-			print(data_from.groups[group])
-			yield (str(group), data_from.groups[group], "")
 
+def items_in_group_getter(self, context, group):
+	filepath = os.path.join(SCRIPT_DIR, "template.blend")
+	with bpy.data.libraries.load(filepath) as (data_from, data_to):
+		# operate directly on external data
+		for obj in data_from.groups:
+			
+			if obj is not None:
+				print(data_from.groups[group].objects[obj])
+				yield (str(obj), data_from.groups[group].objects[obj], "")
 
 
 
@@ -277,23 +306,18 @@ class SetupTemplateButton(bpy.types.Operator):
 	''' Checks current Scene for Billboard Mesh and Cage,
 		add them if not found. '''
 	bl_idname = "gs_billboard.template_setup"
-	bl_label = "Setup Default Rig"
-	#bl_options = {'REGISTER', 'UNDO'}
-
-	my_enum = bpy.props.EnumProperty(items=item_getter)
+	bl_label = "Load Template"
 	
 	instance_groups = True
 	directory = ""
-	filepath = ""
-	filename = ""
 	
 	@classmethod
 	def poll(cls, context):
 		return True
 
+
 	def findActiveView3D(self, context):
-		
-		#find our active 3dView port
+		''' returns active 3dView port or current context '''
 		for area in bpy.context.screen.areas:
 			if area.type == 'VIEW_3D':
 				for region in area.regions:
@@ -305,7 +329,8 @@ class SetupTemplateButton(bpy.types.Operator):
 						# context_override now refferrs to the Active View3D
 		
 						return context_override
-		return None
+		return context
+
 
 	def appendFromTemplate(self,context,typePath):
 		''' copy object presets from blender file '''
@@ -331,58 +356,64 @@ class SetupTemplateButton(bpy.types.Operator):
 
 		logging.info(typePath[1]+" loaded from template")
 
+		# return object name
 		return typePath[1]
 
 
 	def invoke(self, context, event):
+		# set template 
 		self.directory = os.path.join(SCRIPT_DIR, "template.blend\\Group\\")
 
-		#op = bpy.ops.wm.append('INVOKE_DEFAULT', directory=self.directory)
-		#print(dir(op))
-
-		#return op
-		#wm = context.window_manager
-		#return wm.invoke_props_popup(self, event)
-		scn = bpy.context.scene
-		scn.custom.clear()
-		for index, name, _ in item_getter(self, context):
-			item = scn.custom.add()
-			item.ref = int(index)
+		# reset dialog list
+		scene = bpy.context.scene
+		scene.gs_template.name.clear()
+		# populate dialog list
+		for index, name, _ in group_getter(self, context):
+			item = scene.gs_template.name.add()
+			item.index = int(index)
 			item.name = name
-
+		# open dialog window
 		wm = context.window_manager
-		return wm.invoke_props_dialog(self, width=800, height=800)
+		return wm.invoke_props_dialog(self, width=400, height=240)
 	
-	def draw(self, context):
-		layout = self.layout
-		scn = bpy.context.scene
 
+	def draw(self, context):
+
+		layout = self.layout
+		scene = bpy.context.scene
+		# show single column list
 		col = layout.column()
-		col.template_list("UI_UL_list", "example_dialog", scn, "custom", scn, "custom_index", rows=4)
+		col.template_list( 
+			"UI_UL_list", "template_list", 
+			scene.gs_template, "name", 
+			scene.gs_template, "index", 
+			rows=1 
+			)
+
 
 	def execute(self, context):
-		
+		''' on execute, examin selection and append that template '''
 
-		# some shorthand for common objects
 		scene = bpy.context.scene
 		t = scene.gs_template
 
-		# store selection
+		# store selection in current scene
+		# used to restore user state after import is done
 		obj_active = scene.objects.active
 		selection = bpy.context.selected_objects
 
 		logging.info("Starting setup helper...")
 
-		''' only link template items if we haven't assigned them already
-			check1 is to see if billboard exists
-			check2 is to see if user-defined billboard has been assigned 
-		'''
-		print(self.directory)
-		print(self.filename)
-
-		scn = bpy.context.scene
-		index = scn.custom_index
-		message = '%s (index %d) selected' % (scn.custom[index].name, index)
+		scene = bpy.context.scene
+		index = scene.gs_template.index
+		message = '%s (index %d) selected' % (
+			scene.gs_template.name[index].name, 
+			index
+			)
+		for name in items_in_group_getter(self,context,scene.gs_template.name[index].name):
+			print(name)
+		# returns after method call, instead of logging
+		# which is called inline
 		self.report({'INFO'}, message)
 
 		gs_bb_check1 = t.billboard_object is ""
@@ -488,10 +519,19 @@ def initSceneProperties():
 		type=gs_export_options
 		)
 
-	bpy.types.Scene.custom = CollectionProperty(type=ObjectRefItem)
-	bpy.types.Scene.custom_index = IntProperty()
+	logging.info("Template Scene Properties have been added")
 
-	logging.info("Scene Properties have been added")
+	return
+
+
+def clearSceneProperties():
+	# File path matches the Unity Example
+
+	del bpy.types.Scene.gs_template
+	del bpy.types.Scene.gs_billboard_path
+	del bpy.types.Scene.gs_settings
+
+	logging.info("Template Scene Properties have been removed")
 
 	return
 

@@ -29,8 +29,17 @@ bl_info = {
 	"category": "Import-Export" 
 }
 
+import bpy, os, logging, traceback
+from bpy.props import IntProperty, CollectionProperty
+
+''' Settings and Addon options that 
+	help with debugging and development.'''
+DEBUG_ENABLED = True
+DEBUG_TO_FILE = True
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+
 ''' module imports and reloading '''
-if "bpy" in locals():
+if "billboard_ops" in locals():
 	import importlib
 	importlib.reload(billboard_ops)
 	importlib.reload(billboard_ui)
@@ -40,24 +49,19 @@ else:
 	from .billboard_resources import billboard_ui
 	from .billboard_resources import billboard_unity
 
-import bpy, os, logging, traceback
-from bpy.props import IntProperty, CollectionProperty
-
-
-''' Settings and Addon options that 
-	help with debugging and development.'''
-LOG_TO_FILE = True
-SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-
 ''' debug logging '''
-if LOG_TO_FILE is True:
+if DEBUG_TO_FILE is True:
 	logging.basicConfig(
+		format='%(levelname)s: %(message)s', 
 		filename=os.path.join(SCRIPT_DIR,'example.log'),
-		level=logging.DEBUG
+		level=logging.DEBUG if DEBUG_ENABLED else logging.INFO
 		)
 	logging.getLogger().addHandler(logging.StreamHandler())
 else:
-	logging.basicConfig(format='%(message)s',level=logging.INFO)
+	logging.basicConfig(
+		format='%(levelname)s: %(message)s', 
+		level=logging.DEBUG if DEBUG_ENABLED else logging.INFO
+		)
 
 
 # registration hooks
@@ -70,7 +74,6 @@ def register():
 	try: billboard_ops.initSceneProperties()
 	except: logging.error(traceback.message)
 	
-
 	''' presume normal operation'''
 	logging.info(
 		"Registered {} with {} modules".
@@ -83,8 +86,8 @@ def unregister():
 	try: bpy.utils.unregister_module(__name__)
 	except: traceback.print_exc()
 
-	del bpy.types.Scene.custom
-	del bpy.types.Scene.custom_index
+	try: billboard_ops.clearSceneProperties()
+	except: logging.error(traceback.message)
 
 	logging.info(
 		"Unregistered {}".
