@@ -1,5 +1,5 @@
 '''
-Created by GameSolids
+	*** Begin GPL License Block ***
 
 	This program is free software: you can redistribute it and/or modify
 	it under the terms of the GNU General Public License as published by
@@ -16,12 +16,18 @@ Created by GameSolids
 	or write to the Free Software Foundation,
 	Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
+	*** End GPL License Block ***
 '''
+''' (c)2018 GameSolids '''
+
+''' Logic module for Billboard templates and file setup '''
 
 import bpy, os, logging
+from . import template_description
 from os import path
 from operator import itemgetter
-from bpy.props import CollectionProperty, FloatVectorProperty, StringProperty, BoolProperty, EnumProperty, IntProperty
+from bpy.props import CollectionProperty, FloatVectorProperty, StringProperty
+from bpy.props import BoolProperty, EnumProperty, IntProperty
 from bpy_extras.io_utils import ImportHelper
 
 SCRIPT_DIR = os.path.dirname(os.path.realpath(__file__))
@@ -88,7 +94,7 @@ class ListItem(bpy.types.PropertyGroup):
 
 
 class gs_template_objects(bpy.types.PropertyGroup):
-	'''Items that are stored as blender objects'''
+	'''Billboard items stored in the scene'''
 
 	file = bpy.props.StringProperty(
 		name="File",
@@ -279,8 +285,9 @@ class RenderAtlasButton(bpy.types.Operator):
 
 		return {"FINISHED"}
 
-
+# could not figure out putting this in a class
 def group_getter(self, context):
+	''' returns list of Group names from template. '''
 	filepath = os.path.join(SCRIPT_DIR, "template.blend")
 	with bpy.data.libraries.load(filepath) as (data_from, data_to):
 		# operate directly on external data
@@ -288,18 +295,6 @@ def group_getter(self, context):
 			if group is not None:
 				print(data_from.groups[group])
 				yield (str(group), data_from.groups[group], "")
-
-
-def items_in_group_getter(self, context, group):
-	filepath = os.path.join(SCRIPT_DIR, "template.blend")
-	with bpy.data.libraries.load(filepath) as (data_from, data_to):
-		# operate directly on external data
-		for obj in data_from.groups:
-			
-			if obj is not None:
-				print(data_from.groups[group].objects[obj])
-				yield (str(obj), data_from.groups[group].objects[obj], "")
-
 
 
 class SetupTemplateButton(bpy.types.Operator):
@@ -410,22 +405,21 @@ class SetupTemplateButton(bpy.types.Operator):
 			scene.gs_template.name[index].name, 
 			index
 			)
-		for name in items_in_group_getter(self,context,scene.gs_template.name[index].name):
-			print(name)
+		selected = scene.gs_template.name[index].name
+		print(selected)
+		if selected in bpy.data.groups:
+			print("use existing")
+		else:
+			print("use template group")
+			self.appendFromTemplate(
+				context,("Group",selected)
+				)
+
+
+		#print(scene.gs_template.name[index].name)
 		# returns after method call, instead of logging
 		# which is called inline
 		self.report({'INFO'}, message)
-
-		gs_bb_check1 = t.billboard_object is ""
-		gs_bb_check2 = t.billboard_object in bpy.data.objects
-		if gs_bb_check1:
-			t.billboard_object = "Billboard"
-			logging.info("Using new Billboard: name here")
-		
-		else:
-			t.billboard_object = bpy.data.objects['Billboard'].name
-			logging.info("Using current Billboard: name here")
-
 
 		return {"FINISHED"}
 
