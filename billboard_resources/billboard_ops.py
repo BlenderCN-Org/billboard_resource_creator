@@ -23,7 +23,7 @@
 ''' Logic module for Billboard templates and file setup '''
 
 import bpy, os, logging
-from . import template_description
+from .template_description import template_description
 from os import path
 from operator import itemgetter
 from bpy.props import CollectionProperty, FloatVectorProperty, StringProperty
@@ -86,11 +86,11 @@ class gs_export_options(bpy.types.PropertyGroup):
 		default=False
 		)
 
+
 class ListItem(bpy.types.PropertyGroup):
-	''' simple struct to add Index to set of Strings '''
+	''' simple struct to add unique Index to Set of Strings '''
 	name = bpy.props.StringProperty(name="Object Name", default="Unknown")
 	index = bpy.props.IntProperty(name="Ref", default=22, subtype='UNSIGNED')
-
 
 
 class gs_template_objects(bpy.types.PropertyGroup):
@@ -121,10 +121,6 @@ class gs_template_objects(bpy.types.PropertyGroup):
 		default=""
 		)
 
-	group_objects = bpy.props.CollectionProperty(
-		type=ListItem
-		)
-
 	name = bpy.props.CollectionProperty(
 		type=ListItem
 		)
@@ -140,22 +136,15 @@ def DialogSimple(self, context, message = "", title = "Notice: ", icon = 'INFO')
 	
 	bpy.context.window_manager.popup_menu(draw, title = title, icon = icon)
 
-class DialogConfirm(bpy.types.Operator):
-    """ This will over write your current settings. """
-    bl_idname = "my_category.custom_confirm_dialog"
-    bl_label = "Over write current template?"
-    bl_options = {'REGISTER', 'INTERNAL'}
+def DialogConfirm(self, context, operator, message, title="Confirm:", icon = 'INFO'):
+	""" This will over write your current settings. """
 
-    @classmethod
-    def poll(cls, context):
-        return True
+	def draw(self, context):
+		self.layout.label(message)
+		self.layout.operator
+		self.layout.operator.invoke({'CANCELLED'})
 
-    def execute(self, context):
-        self.report({'INFO'}, "CONTINUE")
-        return {'FINISHED'}
-
-    def invoke(self, context, event):
-        return context.window_manager.invoke_confirm(self, event)
+	bpy.context.window_manager.popup_menu(draw, title = title, icon = icon)
 
 class RenderAtlasButton(bpy.types.Operator):
 	''' Bake the textures, and write the files '''
@@ -192,7 +181,6 @@ class RenderAtlasButton(bpy.types.Operator):
 			ShowMessageBox(self, context, "You need to select at least one mesh object.")
 			logging.warning("No objects were selected")
 
-
 		return False
 
 	def hasImage(self, context):
@@ -202,8 +190,8 @@ class RenderAtlasButton(bpy.types.Operator):
 		#if image is None:
 		#	image = bpy.data.images.new("BillboardBaker", width=1024, height=1024)
 
-
 		return True
+
 
 	def bakeSelectedOptions(self):
 
@@ -385,90 +373,55 @@ class SetupTemplateButton(bpy.types.Operator):
 			rows=1 
 			)
 
+	def LinkObjectsInGroup(self, context, group):
+		''' with template in scene, link to billboard renderer '''
+		scene = bpy.context.scene
+		t = scene.gs_template
+
+		for obj in template_description[group]:
+
+			if obj.endswith("_billboard"):
+				t.billboard_object = obj
+
+			elif obj.endswith("_cage"):
+				t.billboard_cage = obj
+
+			elif obj.endswith("_material"):
+				t.billboard_cage_material = obj
 
 	def execute(self, context):
-		''' on execute, examin selection and append that template '''
-
-		scene = bpy.context.scene
-		t = scene.gs_template
+		''' get selection string and load template with that name '''
 
 		# store selection in current scene
-		# used to restore user state after import is done
+		# used to restore working state after import is done
 		obj_active = scene.objects.active
 		selection = bpy.context.selected_objects
+		scene = bpy.context.scene
+
+		# clear current state
+		bpy.ops.gs_billboard.template_clear('INVOKE_DEFAULT')
 
 		logging.info("Starting setup helper...")
 
-		scene = bpy.context.scene
+		# get user selection
+		logging.info("Indexing user selection...")
 		index = scene.gs_template.index
-		message = '%s (index %d) selected' % (
-			scene.gs_template.name[index].name, 
-			index
-			)
 		selected = scene.gs_template.name[index].name
-		print(selected)
+		logging.info("Selected %s" % (selected))
+		# see if any of those things in scene //
+		# now superfluous?? because scene is cleared above
 		if selected in bpy.data.groups:
-			print("use existing")
+			logging.info("%s already in scene. Using local Objects." % selected)
 		else:
-			print("use template group")
-			self.appendFromTemplate(
-				context,("Group",selected)
-				)
+			logging.info("Importing %s." % selected)
+			self.appendFromTemplate( context,("Group",selected) )
 
+		logging.info("Linking imported objects to Billboard Controler")
+		# link imported object to manager
+		self.LinkObjectsInGroup(context, selected)
 
-		#print(scene.gs_template.name[index].name)
-		# returns after method call, instead of logging
-		# which is called inline
-		self.report({'INFO'}, message)
-
-		return {"FINISHED"}
-
-
-	def executes(self, context):
-
-		# some shorthand for common objects
-		scene = bpy.context.scene
-		t = scene.gs_template
-
-		# store selection
-		obj_active = scene.objects.active
-		selection = bpy.context.selected_objects
-
-		logging.info("Starting setup helper...")
-
-		''' only link template items if we haven't assigned them already
-			check1 is to see if billboard exists
-			check2 is to see if user-defined billboard has been assigned 
-		'''
-		gs_bb_check1 = t.billboard_object is ""
-		gs_bb_check2 = t.billboard_object not in scene.objects
-		if gs_bb_check1 and gs_bb_check2 :
-			t.billboard_object = self.appendFromTemplate(
-				context,("Object","Billboard")
-				)
-		else:
-			logging.info("Using current Billboard: name here")
-
-		gs_bc_check1 = t.billboard_cage is ""
-		gs_bc_check2 = t.billboard_cage not in scene.objects
-		if gs_bc_check1 and gs_bc_check2 :
-			t.billboard_cage = self.appendFromTemplate(
-				context,("Object","BillboardCage")
-				)
-		else:
-			logging.info("Using current BillboardCage")
-
-		# ensure material makes it, regardless of global import settings
-		gs_bm_check1 = t.billboard_cage_material is ""
-		gs_bm_check2 = t.billboard_cage_material not in bpy.data.materials
-		if gs_bm_check1 and gs_bm_check2 :
-			t.billboard_cage_material = self.appendFromTemplate(
-				context,("Material","Billboard_material")
-				)
-		else:
-			logging.info("Using current Material")
-		
-		# retrieve selection
+		logging.info("Restoring user state")
+		# retrieve stored working state
 		scene.objects.active = obj_active
 		for obj in selection:
 			obj.select = True
@@ -492,13 +445,35 @@ class ClearTemplateButton(bpy.types.Operator):
 		return True
 
 	def execute(self, context):
+		scene = bpy.context.scene
+		t = scene.gs_template
+		# remove material first so there are no linked uses
+		for mat in bpy.data.materials:
+			if mat.name.endswith("_cage_material"):
+				bpy.data.materials.remove(mat, True)
+				t.billboard_cage_material = ""
+		# remove objects from scene, mesh data from blend file
+		for obj in scene.objects:
+			if obj.name.endswith("_billboard"):
+				scene.objects.unlink(obj)
+				bpy.data.meshes.remove(obj.data)
+				#bpy.data.objects.remove(obj, True)
+				t.billboard_object = ""
+			elif obj.name.endswith("_cage"):
+				scene.objects.unlink(obj)
+				bpy.data.meshes.remove(obj.data)
+				#bpy.data.objects.remove(obj, True)
+				t.billboard_cage = ""
+		# remove group id
+		groupid = t.name[t.index].name
+		if groupid in bpy.data.groups:
+			bpy.data.groups.remove(bpy.data.groups[groupid])
 
 		return {"FINISHED"}
 
 
 def initSceneProperties():
-	# File path matches the Unity Example
-
+	''' initialize addon properties '''
 	bpy.types.Scene.gs_template = bpy.props.PointerProperty(
 		type=gs_template_objects
 		)
@@ -519,8 +494,7 @@ def initSceneProperties():
 
 
 def clearSceneProperties():
-	# File path matches the Unity Example
-
+	''' clear all Addon scene properties '''
 	del bpy.types.Scene.gs_template
 	del bpy.types.Scene.gs_billboard_path
 	del bpy.types.Scene.gs_settings

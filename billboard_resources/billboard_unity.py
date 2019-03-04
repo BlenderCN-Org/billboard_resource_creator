@@ -26,7 +26,9 @@ def writeUnityComponent():
 
 	# Currently select object. (Should be the billboard shape.)
 	#ob = bpy.context.object
-	ob = bpy.context.scene.objects["Billboard"]
+	scene = bpy.context.scene
+	t = scene.gs_template
+	ob = bpy.context.scene.objects[t.billboard_object]
 
 	#obj_active = bpy.context.scene.objects.active
 	scene = bpy.context.scene
@@ -40,7 +42,7 @@ def writeUnityComponent():
 		c_includes = ["System.Collections","System.Collections.Generic","System.IO","UnityEditor","UnityEngine"]
 		for ci in range(len(c_includes)):
 			file.write("using {inc};\n".format(inc=c_includes[ci]))
-			
+		
 		# file header and class setup
 		file.write("\nnamespace gamesolids\n{\n")
 		file.write("\tpublic class BillboardBaker : MonoBehaviour\n\t{\n\t#if UNITY_EDITOR\n")
