@@ -57,7 +57,7 @@ else:
 if DEBUG_TO_FILE is True:
 	logging.basicConfig(
 		format='%(levelname)s: %(message)s', 
-		filename=os.path.join(SCRIPT_DIR,'example.log'),
+		filename=os.path.join(SCRIPT_DIR,'debug.log'),
 		level=logging.DEBUG if DEBUG_ENABLED else logging.INFO
 		)
 	logging.getLogger().addHandler(logging.StreamHandler())
