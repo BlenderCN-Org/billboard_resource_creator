@@ -36,7 +36,7 @@ class BillboardResourcesPanel(bpy.types.Panel):
 		##TODO: make this more friendly
 		scene = context.scene               
 		layout = self.layout
-		layout.prop(scene, "gs_billboard_path")
+		
 		layout.prop_search(scene.gs_template, "billboard_object", scene, "objects")
 		layout.prop_search(scene.gs_template, "billboard_cage", scene, "objects")
 
@@ -45,7 +45,7 @@ class BillboardResourcesPanel(bpy.types.Panel):
 		row.operator("gs_billboard.template_setup")
 		row.operator("gs_billboard.template_clear")
 
-		layout.label(text="Export Options")
+		layout.label(text="Texture Export Options")
 		layout.prop(scene.gs_settings, "filename")
 
 		row = layout.row()
@@ -63,6 +63,7 @@ class BillboardResourcesPanel(bpy.types.Panel):
 		layout.prop(scene.gs_settings, "unityComponent")
 		#layout.prop(scene.gs_settings, "unrealComponent")
 
+		layout.prop(scene, "gs_billboard_path")
 		layout.operator("gs_billboard.render_atlas", text="Export Package")
 
 
