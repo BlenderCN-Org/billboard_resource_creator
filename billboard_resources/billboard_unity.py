@@ -1,5 +1,5 @@
 '''
-Created by GameSolids
+	*** Begin GPL License Block ***
 
 	This program is free software: you can redistribute it and/or modify
 	it under the terms of the GNU General Public License as published by
@@ -16,7 +16,9 @@ Created by GameSolids
 	or write to the Free Software Foundation,
 	Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
+	*** End GPL License Block ***
 '''
+''' (c)2018 GameSolids '''
 
 import bpy, os
 #from os import path
