@@ -36,7 +36,7 @@ class BillboardResourcesPanel(bpy.types.Panel):
 		##TODO: make this more friendly
 		scene = context.scene               
 		layout = self.layout
-		
+
 		layout.prop_search(scene.gs_template, "billboard_object", scene, "objects")
 		layout.prop_search(scene.gs_template, "billboard_cage", scene, "objects")
 
@@ -47,6 +47,10 @@ class BillboardResourcesPanel(bpy.types.Panel):
 
 		layout.label(text="Texture Export Options")
 		layout.prop(scene.gs_settings, "filename")
+
+		row = layout.row()
+		row.prop(scene.gs_settings, "combined")
+		row.prop(scene.gs_settings, "combined_sfx")
 
 		row = layout.row()
 		row.prop(scene.gs_settings, "diffuse")

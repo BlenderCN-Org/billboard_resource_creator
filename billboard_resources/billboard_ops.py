@@ -40,6 +40,15 @@ class gs_export_options(bpy.types.PropertyGroup):
 		name="Base Name",
 		default="billboard_name"
 		)
+	# combined texture atlas
+	combined = bpy.props.BoolProperty(
+		name="Combined suffix",
+		default=True
+		)
+	combined_sfx = bpy.props.StringProperty(
+		name=" ",
+		default="_alt"
+		)
 	# diffuse texture atlas
 	diffuse = bpy.props.BoolProperty(
 		name="Diffuse suffix",
@@ -169,16 +178,18 @@ class RenderAtlasButton(bpy.types.Operator):
 		selection = bpy.context.selected_objects
 
 		# check selected objects
+		scene.objects[t.billboard_object].select = False
+		scene.objects[t.billboard_cage].select = False
 		if len(selection) > 0:
 			if t.billboard_cage is not "":
 				scene.objects[t.billboard_cage].select = True
 				scene.objects.active = scene.objects[t.billboard_cage]
 				return True
 			else: 
-				ShowMessageBox(self, context, "You need to set Billboard and BillboardCage")
+				DialogSimple(self, context, "You need to set Billboard and BillboardCage")
 				logging.warning("Scene not setup correctly")
 		else: 
-			ShowMessageBox(self, context, "You need to select at least one mesh object.")
+			DialogSimple(self, context, "You need to select atleast one object to billboard.")
 			logging.warning("No objects were selected")
 
 		return False
@@ -193,56 +204,105 @@ class RenderAtlasButton(bpy.types.Operator):
 		return True
 
 
-	def bakeSelectedOptions(self):
+	def bakeSelectedOptions(self, context):
 
 		# some shorthand for common objects
 		scene = bpy.context.scene
 		t = scene.gs_template
 		obj_active = scene.objects.active
 
-		# start bakes
-		if scene.gs_settings.diffuse:
+		try:
+			# start bakes
+			if scene.gs_settings.diffuse:
 
-			fName = obj_active.name +"_d.png"
-			fPath = os.path.join(scene.gs_billboard_path, fName)
+				fName = scene.gs_settings.filename +"_d.png"
+				fPath = os.path.join(scene.gs_billboard_path, fName)
 
-			bpy.ops.object.bake(
-				type='DIFFUSE', 
-				pass_filter={'COLOR'}, 
-				filepath=fPath, 
-				width=1024, height=1024, 
-				margin=1, 
-				use_selected_to_active=True, 
-				save_mode='INTERNAL', 
-				use_split_materials=False
-				)
-			image = bpy.data.images["BillboardBaker"]
-			image.filepath_raw = fPath
-			image.save()
+				bpy.ops.object.bake(
+					type='DIFFUSE', 
+					pass_filter={'COLOR'}, 
+					filepath=fPath, 
+					width=1024, height=1024, 
+					margin=1, 
+					use_selected_to_active=True, 
+					save_mode='INTERNAL', 
+					use_split_materials=False
+					)
+				image = bpy.data.images["BillboardBaker"]
+				image.filepath_raw = fPath
+				image.save()
 
-		# start bakes
-		if scene.gs_settings.normal:
+			# start bakes
+			if scene.gs_settings.normal:
 
-			fName = obj_active.name +"_n.png"
-			fPath = os.path.join(scene.gs_billboard_path, fName)
+				fName = scene.gs_settings.filename +"_n.png"
+				fPath = os.path.join(scene.gs_billboard_path, fName)
 
-			bpy.ops.object.bake(
-				type='NORMAL', 
-				pass_filter={'COLOR'}, 
-				filepath=fPath, 
-				width=1024, height=1024, 
-				margin=1, 
-				use_selected_to_active=True, 
-				save_mode='INTERNAL', 
-				use_split_materials=False
-				)
-			image = bpy.data.images["BillboardBaker"]
-			image.filepath_raw = fPath
-			image.save()
+				bpy.ops.object.bake(
+					type='NORMAL', 
+					pass_filter={'COLOR'}, 
+					filepath=fPath, 
+					width=1024, height=1024, 
+					margin=1, 
+					use_selected_to_active=True, 
+					save_mode='INTERNAL', 
+					use_split_materials=False
+					)
+				image = bpy.data.images["BillboardBaker"]
+				image.filepath_raw = fPath
+				image.save()
 
-		if scene.gs_settings.unityComponent:
-			from . import billboard_unity
-			billboard_unity.writeUnityComponent()
+			# start bakes
+			if scene.gs_settings.ambio:
+
+				fName = scene.gs_settings.filename +"_ao.png"
+				fPath = os.path.join(scene.gs_billboard_path, fName)
+
+				bpy.ops.object.bake(
+					type='AO', 
+					pass_filter={'AO'}, 
+					filepath=fPath, 
+					width=1024, height=1024, 
+					margin=1, 
+					use_selected_to_active=True, 
+					save_mode='INTERNAL', 
+					use_split_materials=False
+					)
+				image = bpy.data.images["BillboardBaker"]
+				image.filepath_raw = fPath
+				image.save()
+
+			# start bakes
+			if scene.gs_settings.combined:
+
+				fName = scene.gs_settings.filename +"_alt.png"
+				fPath = os.path.join(scene.gs_billboard_path, fName)
+
+				bpy.ops.object.bake(
+					type='COMBINED', 
+					pass_filter={'EMIT','DIRECT'}, 
+					filepath=fPath, 
+					width=1024, height=1024, 
+					margin=1, 
+					use_selected_to_active=True, 
+					save_mode='INTERNAL', 
+					use_split_materials=False
+					)
+				image = None
+				for img in bpy.data.images:
+					if img.name.startswith("BillboardBaker"):
+						image = bpy.data.images[img.name]
+						image.filepath_raw = fPath
+						image.save()
+				if image is None:
+					DialogSimple(self, context, "Did you import a template?")
+
+			if scene.gs_settings.unityComponent:
+				from . import billboard_unity
+				billboard_unity.writeUnityComponent()
+		except:
+			DialogSimple(self, context, "You need to select the mesh objects you want to billboard.")
+			logging.warning("No objects were selected")
 
 	def execute(self, context):
 
@@ -269,7 +329,7 @@ class RenderAtlasButton(bpy.types.Operator):
 			logging.warning("billboard template not defined")
 
 		# do it
-		self.bakeSelectedOptions()
+		self.bakeSelectedOptions(context)
 
 		return {"FINISHED"}
 
@@ -392,11 +452,7 @@ class SetupTemplateButton(bpy.types.Operator):
 	def execute(self, context):
 		''' get selection string and load template with that name '''
 
-		# store selection in current scene
-		# used to restore working state after import is done
 		scene = bpy.context.scene
-		obj_active = scene.objects.active
-		selection = bpy.context.selected_objects
 
 		# clear current state
 		bpy.ops.gs_billboard.template_clear('INVOKE_DEFAULT')
@@ -423,12 +479,8 @@ class SetupTemplateButton(bpy.types.Operator):
 		logging.info("Restoring user state")
 		# retrieve stored working state
 
-		scene.objects.active = obj_active
-
-		for obj in bpy.context.selected_objects:
-			obj.select = False
-		for obj in selection:
-			obj.select = True
+		if obj_active is not None and obj_active.name in scene.objects:
+			scene.objects.active = obj_active
 
 		logging.info("Setup helper done")
 
