@@ -42,7 +42,7 @@ class gs_export_options(bpy.types.PropertyGroup):
 		)
 	# diffuse texture atlas
 	diffuse = bpy.props.BoolProperty(
-		name="Diffuse",
+		name="Diffuse suffix",
 		default=True
 		)
 	diffuse_sfx = bpy.props.StringProperty(
@@ -51,7 +51,7 @@ class gs_export_options(bpy.types.PropertyGroup):
 		)
 	# normals map texture atlas
 	normal = bpy.props.BoolProperty(
-		name="Normals",
+		name="Normals suffix",
 		default=True
 		)
 	normal_sfx = bpy.props.StringProperty(
@@ -60,7 +60,7 @@ class gs_export_options(bpy.types.PropertyGroup):
 		)
 	# ambient occlusion texture atlas
 	ambio = bpy.props.BoolProperty(
-		name="AmbientOcclusion",
+		name="AmbientOcclusion suffix",
 		default=False
 		)
 	ambio_sfx = bpy.props.StringProperty(
@@ -70,19 +70,19 @@ class gs_export_options(bpy.types.PropertyGroup):
 	# Unity3D component for assembling the billboard
 	# as a Unity BillboardAsset
 	unityComponent = bpy.props.BoolProperty(
-		name="Unity3D Component",
+		name="Build Unity3D Component",
 		default=True
 		)
 	# Unity3D shader for displaying the 
 	# BillboardAsset in Unity
 	unityShader = bpy.props.BoolProperty(
-		name="Unity3D Shader",
+		name="Include Unity3D Shader",
 		default=False
 		)
 	# Unreal Engine Script for assembling the 
 	# billboard in Unreal
 	unrealComponent = bpy.props.BoolProperty(
-		name="Unreal Component",
+		name="Build Unreal Component",
 		default=False
 		)
 
@@ -394,9 +394,9 @@ class SetupTemplateButton(bpy.types.Operator):
 
 		# store selection in current scene
 		# used to restore working state after import is done
+		scene = bpy.context.scene
 		obj_active = scene.objects.active
 		selection = bpy.context.selected_objects
-		scene = bpy.context.scene
 
 		# clear current state
 		bpy.ops.gs_billboard.template_clear('INVOKE_DEFAULT')
@@ -422,7 +422,11 @@ class SetupTemplateButton(bpy.types.Operator):
 
 		logging.info("Restoring user state")
 		# retrieve stored working state
+
 		scene.objects.active = obj_active
+
+		for obj in bpy.context.selected_objects:
+			obj.select = False
 		for obj in selection:
 			obj.select = True
 
@@ -436,7 +440,7 @@ class ClearTemplateButton(bpy.types.Operator):
 	''' Checks current Scene for Billboard Mesh and Cage,
 		add them if not found. '''
 	bl_idname = "gs_billboard.template_clear"
-	bl_label = "Clear Rig"
+	bl_label = "Clear Template"
 	bl_description = ""
 	bl_options = {"REGISTER"}
 	
