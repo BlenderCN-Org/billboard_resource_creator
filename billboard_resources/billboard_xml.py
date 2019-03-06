@@ -91,8 +91,9 @@ def writeXML():
 	# Order of indices from the UV loops
 	for face in ob.data.polygons:
 		for loop_index in range(face.loop_start, face.loop_start + face.loop_total):
+			#loop_index = loop_index if loop_index > 0 else "_0"
 			treeDict['indices']['index'].append(
-			{ str(loop_index) : ob.data.loops[loop_index].vertex_index }
+			{ "_"+str(loop_index) : ob.data.loops[loop_index].vertex_index }
 			)
 			
 	# Vertices: unique ordered list
