@@ -298,9 +298,12 @@ class RenderAtlasButton(bpy.types.Operator):
 					DialogSimple(self, context, "Did you import a template?")
 
 			if scene.gs_settings.unityComponent:
-				from . import billboard_unity
-				billboard_unity.writeUnityComponent()
+				#from . import billboard_unity
+				#billboard_unity.writeUnityComponent()
+				from . import billboard_xml
+				billboard_xml.writeXML()
 		except:
+			logging.error(traceback.message)
 			DialogSimple(self, context, "You need to select the mesh objects you want to billboard.")
 			logging.warning("No objects were selected")
 
