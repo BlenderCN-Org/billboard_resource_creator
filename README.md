@@ -1,6 +1,12 @@
 Billboard Resource Creator
 --------------------------
 
+This addon is now being developed for Blender 2.80 here:
+https://github.com/gamesolids/billboard_asset_baker
+
+This is staying here for development history.
+
+
 This is a Blender 2.79 Addon for building Speed Tree billboard assets for Unity.
 It's 99% working. There are some bizarre workflow edge cases that still throw unhandled errors. 
 
