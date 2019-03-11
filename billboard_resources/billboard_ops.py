@@ -460,6 +460,8 @@ class SetupTemplateButton(bpy.types.Operator):
 		''' get selection string and load template with that name '''
 
 		scene = bpy.context.scene
+		obj_active = scene.objects.active
+		selection = bpy.context.selected_objects
 
 		# clear current state
 		bpy.ops.gs_billboard.template_clear('INVOKE_DEFAULT')
