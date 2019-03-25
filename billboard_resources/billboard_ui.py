@@ -64,7 +64,7 @@ class BillboardResourcesPanel(bpy.types.Panel):
 		row.prop(scene.gs_settings, "ambio")
 		row.prop(scene.gs_settings, "ambio_sfx")
 
-		layout.prop(scene.gs_settings, "unityComponent")
+		layout.prop(scene.gs_settings, "billboardXML")
 		#layout.prop(scene.gs_settings, "unrealComponent")
 
 		layout.prop(scene, "gs_billboard_path")

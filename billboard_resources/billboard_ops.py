@@ -22,7 +22,7 @@
 
 ''' Logic module for Billboard templates and file setup '''
 
-import bpy, os, logging
+import bpy, os, logging, traceback
 from .template_description import template_description
 from os import path
 from operator import itemgetter
@@ -78,21 +78,9 @@ class gs_export_options(bpy.types.PropertyGroup):
 		)
 	# Unity3D component for assembling the billboard
 	# as a Unity BillboardAsset
-	unityComponent = bpy.props.BoolProperty(
+	billboardXML = bpy.props.BoolProperty(
 		name="Build Unity3D Component",
 		default=True
-		)
-	# Unity3D shader for displaying the 
-	# BillboardAsset in Unity
-	unityShader = bpy.props.BoolProperty(
-		name="Include Unity3D Shader",
-		default=False
-		)
-	# Unreal Engine Script for assembling the 
-	# billboard in Unreal
-	unrealComponent = bpy.props.BoolProperty(
-		name="Build Unreal Component",
-		default=False
 		)
 
 
@@ -210,13 +198,18 @@ class RenderAtlasButton(bpy.types.Operator):
 		scene = bpy.context.scene
 		t = scene.gs_template
 		obj_active = scene.objects.active
+		texFolder = "textures"
+
+		if not os.path.exists(os.path.join( scene.gs_billboard_path, texFolder )):
+			os.makedirs(os.path.join( scene.gs_billboard_path, texFolder ))
 
 		try:
 			# start bakes
 			if scene.gs_settings.diffuse:
 
-				fName = scene.gs_settings.filename +"_d.png"
-				fPath = os.path.join(scene.gs_billboard_path, fName)
+				fName = scene.gs_settings.filename + scene.gs_settings.diffuse_sfx + ".png"
+				fPath = os.path.join( scene.gs_billboard_path, texFolder )
+				fPath = os.path.join( fPath, fName )
 
 				bpy.ops.object.bake(
 					type='DIFFUSE', 
@@ -236,8 +229,9 @@ class RenderAtlasButton(bpy.types.Operator):
 			# start bakes
 			if scene.gs_settings.normal:
 
-				fName = scene.gs_settings.filename +"_n.png"
-				fPath = os.path.join(scene.gs_billboard_path, fName)
+				fName = scene.gs_settings.filename + scene.gs_settings.normal_sfx + ".png"
+				fPath = os.path.join( scene.gs_billboard_path, texFolder )
+				fPath = os.path.join( fPath, fName )
 
 				bpy.ops.object.bake(
 					type='NORMAL', 
@@ -260,8 +254,9 @@ class RenderAtlasButton(bpy.types.Operator):
 			# start bakes
 			if scene.gs_settings.ambio:
 
-				fName = scene.gs_settings.filename +"_ao.png"
-				fPath = os.path.join(scene.gs_billboard_path, fName)
+				fName = scene.gs_settings.filename + scene.gs_settings.ambio_sfx + ".png"
+				fPath = os.path.join( scene.gs_billboard_path, texFolder )
+				fPath = os.path.join( fPath, fName )
 
 				bpy.ops.object.bake(
 					type='AO', 
@@ -281,8 +276,9 @@ class RenderAtlasButton(bpy.types.Operator):
 			# start bakes
 			if scene.gs_settings.combined:
 
-				fName = scene.gs_settings.filename +"_alt.png"
-				fPath = os.path.join(scene.gs_billboard_path, fName)
+				fName = scene.gs_settings.filename + scene.gs_settings.combined_sfx + ".png"
+				fPath = os.path.join( scene.gs_billboard_path, texFolder )
+				fPath = os.path.join( fPath, fName )
 
 				bpy.ops.object.bake(
 					type='COMBINED', 
@@ -311,13 +307,12 @@ class RenderAtlasButton(bpy.types.Operator):
 				if image is None:
 					DialogSimple(self, context, "Did you import a template?")
 
-			if scene.gs_settings.unityComponent:
-				#from . import billboard_unity
+			if scene.gs_settings.billboardXML:
 				#billboard_unity.writeUnityComponent()
 				from . import billboard_xml
 				billboard_xml.writeXML()
 		except:
-			logging.error(traceback.message)
+			#logging.error(traceback.message)
 			DialogSimple(self, context, "You need to select the mesh objects you want to billboard.")
 			logging.warning("No objects were selected")
 
