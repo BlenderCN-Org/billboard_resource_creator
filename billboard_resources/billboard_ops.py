@@ -248,7 +248,10 @@ class RenderAtlasButton(bpy.types.Operator):
 					margin=1, 
 					use_selected_to_active=True, 
 					save_mode='INTERNAL', 
-					use_split_materials=False
+					use_split_materials=False, 
+					normal_space='TANGENT', 
+					normal_g='POS_Z', 
+					normal_b='POS_Y'
 					)
 				image = bpy.data.images["BillboardBaker"]
 				image.filepath_raw = fPath
@@ -292,12 +295,19 @@ class RenderAtlasButton(bpy.types.Operator):
 					save_mode='INTERNAL', 
 					use_split_materials=False
 					)
+				'''
 				image = None
 				for img in bpy.data.images:
 					if img.name.startswith("BillboardBaker"):
 						image = bpy.data.images[img.name]
 						image.filepath_raw = fPath
 						image.save()
+				'''
+
+				image = bpy.data.images["BillboardBaker"]
+				image.filepath_raw = fPath
+				image.save()
+
 				if image is None:
 					DialogSimple(self, context, "Did you import a template?")
 

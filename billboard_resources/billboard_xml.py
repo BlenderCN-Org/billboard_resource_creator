@@ -42,7 +42,9 @@ def dict2xml(d, root_node=None):
 			elif isinstance(value, list):
 				children.append(dict2xml(value, key))
 			else:
+				#change this line to textNode from attribute
 				xml = xml + ' ' + key + '="' + str(value) + '"'
+				#xml = xml + '<' + key + '>' + str(value) + '</' + key +'>'
 	else:
 		for value in d:
 			children.append(dict2xml(value, root_singular))
@@ -76,7 +78,7 @@ def writeXML():
 	fPath = os.path.join(scene.gs_billboard_path, fName)
 
 	# Texture Coordinates from the UV map
-	treeDict = {'texCoords':{'face':[],},'indices':{'index':[],},'vertices':{'vertex':[],},}
+	treeDict = {'basename':{}, 'texCoords':{'face':[],},'indices':{'index':[],},'vertices':{'vertex':[],},}
 
 	tileWidth = 0.333
 	tileHeight= 0.333
@@ -113,9 +115,11 @@ def writeXML():
 
 
 	# Build a Unity Component file in C#.
+	#file.write( "<basename>"+scene.gs_settings.filename+"</basename>\n" )
 	with open("{tpath}".format( tpath=fPath ), "w" ) as file:
-		file.write( "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n" )
-		file.write( dict2xml( treeDict, scene.gs_settings.filename ))
+		file.write( "<?xml version=\"1.0\" encoding=\"UTF-8\"?>")
+		treeDict['basename'] = (scene.gs_settings.filename)
+		file.write( dict2xml( treeDict, "billboard_data" ))
 
 		# that should do it
 		
